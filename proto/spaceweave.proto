@@ -1,0 +1,32 @@
+syntax = "proto3";
+package diskalloc;
+
+option go_package = "github.com/li1213987842/spaceweave/pkg/spaceweaveproto";
+
+service DiskAllocator {
+  rpc Allocate (AllocateRequest) returns (AllocateResponse) {}
+  rpc Free (FreeRequest) returns (FreeResponse) {}
+  rpc GetDiskUtilization (GetDiskUtilizationRequest) returns (GetDiskUtilizationResponse) {}
+}
+
+message AllocateRequest {
+  uint64 size = 1;
+}
+
+message AllocateResponse {
+  uint64 address = 1;
+}
+
+message FreeRequest {
+  uint64 address = 1;
+  uint64 size = 2;
+}
+
+message FreeResponse {}
+
+message GetDiskUtilizationRequest{
+}
+
+message GetDiskUtilizationResponse{
+  float utilization = 1;
+}
