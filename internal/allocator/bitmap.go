@@ -1,7 +1,6 @@
 package allocator
 
 import (
-	"errors"
 	"math/bits"
 	"math/rand"
 	"sync"
@@ -35,11 +34,11 @@ func NewBitMap(size, shards uint64) *ConcurrentBitMap {
 }
 
 func (b *ConcurrentBitMap) Allocate(size uint64) (uint64, error) {
-	shardCount := len(b.shards)
-	startShard := uint64(uint32(random.Int63())) % uint64(shardCount)
+	shardCount := uint64(len(b.shards))
+	startShard := uint64(uint32(random.Int63())) % shardCount
 
-	for i := 0; i < shardCount; i++ {
-		shardIndex := (startShard + uint64(i)) % uint64(shardCount)
+	for i := uint64(0); i < shardCount; i++ {
+		shardIndex := (startShard + i) % shardCount
 		shard := &b.shards[shardIndex]
 
 		shard.mu.Lock()
@@ -49,7 +48,7 @@ func (b *ConcurrentBitMap) Allocate(size uint64) (uint64, error) {
 			return shardIndex*uint64(len(shard.bits))*64 + start, nil
 		}
 	}
-	return 0, errors.New("NoSpaceLeft")
+	return 0, ErrNoSpaceLeft
 }
 
 func allocateInShard(bits []uint64, size uint64) (uint64, bool) {

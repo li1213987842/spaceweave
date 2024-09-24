@@ -1,7 +1,6 @@
 package allocator
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/google/btree"
@@ -69,28 +68,26 @@ func (dm *BTreeManager) Allocate(size uint64) (uint64, error) {
 	defer dm.mu.Unlock()
 
 	if dm.freeSpace < size {
-		return 0, errors.New("NoSpaceLeft")
+		return 0, ErrNoSpaceLeft
 	}
 
-	var bestFit *BTreeBlock
+	var allocatedBlock *BTreeBlock
 	dm.treeBySize.AscendGreaterOrEqual(BlockBySize{&BTreeBlock{Size: size}}, func(item btree.Item) bool {
 		block := item.(BlockBySize).BTreeBlock
-		if bestFit == nil || block.Size < bestFit.Size {
-			bestFit = block
-		}
-		return bestFit.Size == size // 如果找到完全匹配的块，就停止搜索
+		allocatedBlock = block
+		return false
 	})
 
-	if bestFit == nil {
-		return 0, errors.New("NoSpaceLeft")
+	if allocatedBlock == nil {
+		return 0, ErrNoSpaceLeft
 	}
 
-	start := bestFit.Start
-	dm.treeBySize.Delete(BlockBySize{bestFit})
-	dm.treeByStart.Delete(BlockByStart{bestFit})
+	start := allocatedBlock.Start
+	dm.treeBySize.Delete(BlockBySize{allocatedBlock})
+	dm.treeByStart.Delete(BlockByStart{allocatedBlock})
 
-	if bestFit.Size > size {
-		remainingBlock := &BTreeBlock{Start: start + size, Size: bestFit.Size - size}
+	if allocatedBlock.Size > size {
+		remainingBlock := &BTreeBlock{Start: start + size, Size: allocatedBlock.Size - size}
 		dm.treeBySize.ReplaceOrInsert(BlockBySize{remainingBlock})
 		dm.treeByStart.ReplaceOrInsert(BlockByStart{remainingBlock})
 	}

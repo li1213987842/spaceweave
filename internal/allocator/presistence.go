@@ -48,16 +48,27 @@ func (da *diskAllocatorImpl) SaveState() error {
 		return err
 	}
 
-	// Open file for writing
-	file, err := os.Create(da.cfg.StatePersistencePath)
+	tempFile, err := os.CreateTemp(filepath.Dir(da.cfg.StatePersistencePath), "temp_state_*")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer file.Close()
+	tempFilePath := tempFile.Name()
+	defer os.Remove(tempFilePath)
 
-	// Encode and write data
-	encoder := gob.NewEncoder(file)
-	return encoder.Encode(data)
+	// 写入临时文件
+	encoder := gob.NewEncoder(tempFile)
+	if err := encoder.Encode(data); err != nil {
+		tempFile.Close()
+		return fmt.Errorf("failed to encode state: %w", err)
+	}
+	tempFile.Close()
+
+	// 重命名临时文件
+	if err := os.Rename(tempFilePath, da.cfg.StatePersistencePath); err != nil {
+		return fmt.Errorf("failed to rename temp file: %w", err)
+	}
+
+	return nil
 }
 
 func LoadState(cfg *config.Config) (DiskAllocator, error) {
@@ -82,8 +93,7 @@ func LoadState(cfg *config.Config) (DiskAllocator, error) {
 	// Open file for reading
 	file, err := os.Open(cfg.StatePersistencePath)
 	if err != nil {
-		fmt.Println("dddd", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to open state file: %w", err)
 	}
 	defer file.Close()
 	// Get file info

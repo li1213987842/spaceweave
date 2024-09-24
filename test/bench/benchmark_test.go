@@ -35,11 +35,6 @@ type BenchmarkStats struct {
 // 使用快速随机数生成器
 var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-func generateRandomSize() uint64 {
-	size := MinRequestSize + rng.Uint64()%(MaxRequestSize-MinRequestSize+1)
-	return ((size + 511) / 512) * 512 // 调整为 512 字节的倍数
-}
-
 func runConcurrentBenchmark(b *testing.B, targetWrite uint64) {
 	cfg := &config.Config{
 		TotalSize:            targetWrite,
@@ -98,7 +93,7 @@ func writeWorker(allocator allocator.DiskAllocator, operationsChan chan<- Operat
 			}{}
 
 			for j := 0; j < BatchSize; j++ {
-				size := generateRandomSize()
+				size := randomSize()
 				start := time.Now()
 				address, err := allocator.Allocate(size)
 				duration := time.Since(start)
@@ -174,6 +169,17 @@ func freeWorker(b *testing.B, allocator allocator.DiskAllocator, opsChan <-chan 
 	atomic.AddUint64(&stats.TotalFreed, localStats.freed)
 }
 
+func randomSize() uint64 {
+	sizes := []uint64{
+		4 * 1024,        // 4KB
+		16 * 1024,       // 16KB
+		64 * 1024,       // 64KB
+		256 * 1024,      // 256KB
+		1 * 1024 * 1024, // 1MB
+		4 * 1024 * 1024, // 4MB
+	}
+	return sizes[rand.Intn(len(sizes))]
+}
 func printBenchmarkResults(b *testing.B, totalTime time.Duration, stats *BenchmarkStats, utilization float64) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)

@@ -1,6 +1,8 @@
 package allocator
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -9,6 +11,8 @@ import (
 )
 
 const MiBThreshold = 64 //64 * 4KB = 256kb
+
+var ErrNoSpaceLeft = errors.New("no space left")
 
 type DiskAllocator interface {
 	Allocate(size uint64) (uint64, error)
@@ -40,7 +44,7 @@ type UsageStats struct {
 func NewDiskAllocator(cfg *config.Config) DiskAllocator {
 	da, err := LoadState(cfg)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("failed to load state: %w", err))
 	}
 	return da
 }
