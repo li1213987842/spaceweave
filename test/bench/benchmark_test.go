@@ -46,6 +46,7 @@ func runConcurrentBenchmark(b *testing.B, targetWrite uint64) {
 	rand.Seed(time.Now().UnixNano())
 
 	allocator := allocator.NewDiskAllocator(cfg)
+	defer allocator.Close()
 	stats := &BenchmarkStats{}
 
 	freeRatio := rng.Float64()*0.3 + 0.2 // 20% to 50%
@@ -93,7 +94,9 @@ func writeWorker(allocator allocator.DiskAllocator, operationsChan chan<- Operat
 			}{}
 
 			for j := 0; j < BatchSize; j++ {
-				size := randomSize()
+				size := MinRequestSize + rand.Uint64()%(MaxRequestSize-MinRequestSize+1)
+				size = ((size + 511) / 512) * 512 // 调整为 512 字节的倍数
+
 				start := time.Now()
 				address, err := allocator.Allocate(size)
 				duration := time.Since(start)
