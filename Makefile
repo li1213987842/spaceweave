@@ -5,7 +5,7 @@ proto:
 
 build:
 	go build -o bin/server cmd/server/main.go
-	go build -o bin/test test/main.go
+	go build -o bin/test test/client-test/main.go
 
 unit-test:
 	go test ./...
@@ -14,4 +14,7 @@ run-server:
 	./bin/server
 
 run-test:
-	./bin/test
+	./bin/client-test
+
+benchmark:
+	go test -bench=. -benchtime=1x -timeout=120m ./test/bench/benchmark_test.go

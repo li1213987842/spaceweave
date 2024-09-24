@@ -16,7 +16,7 @@ const (
 	serverAddr        = "localhost:22500" // 假设服务器地址
 	minRequestSize    = 512
 	maxRequestSize    = 4 * 1024 * 1024 // 4 MiB
-	deleteProbability = 0.2             // 20% 的概率执行删除操作
+	deleteProbability = 0.4             // 20% 的概率执行删除操作
 	concurrentClients = 16
 )
 

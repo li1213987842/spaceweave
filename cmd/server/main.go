@@ -74,6 +74,10 @@ func runService(cfg *config.Config) {
 			log.Println("Stopping gRPC service")
 			grpcServer.GracefulStop()
 			log.Println("gRPC service stopped")
+
+			log.Println("Closing allocator store")
+			service.AllocatorStore.Close()
+			log.Println("Allocator store closed")
 			wg.Done()
 		}()
 	}()

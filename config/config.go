@@ -8,13 +8,16 @@ import (
 )
 
 type Config struct {
-	GrpcMaxIdleSec  int     `env:"GRPC_MAX_IDLE_SEC" default:"3600"`
-	SpaceWeaveAddr  string  `env:"SPACE_WEAVE_ADDR" default:":22500"`
-	UnitSize        uint64  `env:"UNIT_SIZE" default:"4096"`
-	TotalSize       uint64  `env:"TOTAL_SIZE" default:"1099511627776"` // 1 TiB
-	SmallBlockRatio float64 `env:"SMALL_BLOCK_RATIO" default:"0.1"`
-	NumShards       uint64  `env:"NUM_SHARDS" default:"64"`
-	SmallBlockLimit uint64  // 计算得出，不从环境变量读取
+	GrpcMaxIdleSec           int     `env:"GRPC_MAX_IDLE_SEC" default:"3600"`
+	SpaceWeaveAddr           string  `env:"SPACE_WEAVE_ADDR" default:":22500"`
+	UnitSize                 uint64  `env:"UNIT_SIZE" default:"4096"`
+	TotalSize                uint64  `env:"TOTAL_SIZE" default:"1099511627776"` // 1 TiB
+	SmallBlockRatio          float64 `env:"SMALL_BLOCK_RATIO" default:"0.1"`
+	NumShards                uint64  `env:"NUM_SHARDS" default:"256"`
+	SmallBlockLimit          uint64  // 计算得出，不从环境变量读取
+	StatePersistencePath     string  `env:"STATE_PERSISTENCE_PATH" default:".spaceweave"`
+	BackupIntervalSec        int     `env:"BACKUP_INTERVAL_SEC" default:"5"`
+	BackupOperationThreshold uint64  `env:"BACKUP_OPERATION_THRESHOLD" default:"1000000"`
 }
 
 func LoadConfigFromEnv() (*Config, error) {

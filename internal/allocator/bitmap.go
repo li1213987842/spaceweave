@@ -1,15 +1,18 @@
-package bitmap
+package allocator
 
 import (
 	"errors"
 	"math/bits"
+	"math/rand"
 	"sync"
 	"sync/atomic"
+	"time"
 )
+
+var random = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type ConcurrentBitMap struct {
 	shards []Shard
-	mu     sync.RWMutex
 }
 
 type Shard struct {
@@ -32,18 +35,19 @@ func NewBitMap(size, shards uint64) *ConcurrentBitMap {
 }
 
 func (b *ConcurrentBitMap) Allocate(size uint64) (uint64, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
+	shardCount := len(b.shards)
+	startShard := uint64(uint32(random.Int63())) % uint64(shardCount)
 
-	for s := 0; s < len(b.shards); s++ {
-		shard := &b.shards[s]
+	for i := 0; i < shardCount; i++ {
+		shardIndex := (startShard + uint64(i)) % uint64(shardCount)
+		shard := &b.shards[shardIndex]
+
 		shard.mu.Lock()
 		start, ok := allocateInShard(shard.bits, size)
-		if ok {
-			shard.mu.Unlock()
-			return uint64(s*len(shard.bits)*64) + start, nil
-		}
 		shard.mu.Unlock()
+		if ok {
+			return shardIndex*uint64(len(shard.bits))*64 + start, nil
+		}
 	}
 	return 0, errors.New("NoSpaceLeft")
 }
@@ -86,8 +90,6 @@ func markAllocated(bits []uint64, start, size uint64) {
 }
 
 func (b *ConcurrentBitMap) Free(start, size uint64) error {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
 	shardIndex := start / uint64(len(b.shards[0].bits)*64)
 	bitStart := start % uint64(len(b.shards[0].bits)*64)
 
@@ -140,15 +142,15 @@ func (b *ConcurrentBitMap) freeSmallInShard(shardIndex, fromBit, toBit uint64) {
 }
 
 func (b *ConcurrentBitMap) GetAvailableSpace() uint64 {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	var totalUnused uint64
 	var wg sync.WaitGroup
 	for i := range b.shards {
 		wg.Add(1)
 		go func(shard *Shard) {
 			defer wg.Done()
+			shard.mu.RLock()
+			defer shard.mu.RUnlock()
+
 			var unused uint64
 			for _, v := range shard.bits {
 				unused += uint64(64 - bits.OnesCount64(v))
